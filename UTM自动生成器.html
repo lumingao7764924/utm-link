@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UTM 自动生成器</title>
+<style>
+  :root {
+    --bg: #eef2f6;
+    --card: #ffffff;
+    --ink: #1a2332;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --line-strong: #cbd5e1;
+    --accent: #1e4d7b;
+    --accent-soft: rgba(30, 77, 123, 0.1);
+    --ok: #0f766e;
+    --warn: #b45309;
+    --field: #ffffff;
+    --field-soft: #f8fafc;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1000px 420px at 8% -8%, #dbeafe 0%, transparent 55%),
+      radial-gradient(800px 360px at 100% 0%, #ccfbf1 0%, transparent 48%),
+      var(--bg);
+    min-height: 100vh;
+    padding: 36px 16px 56px;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 1.7rem;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+  }
+  .sub {
+    color: var(--muted);
+    margin: 0 0 24px;
+    line-height: 1.55;
+    font-size: 0.95rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+    .card { padding: 20px; }
+  }
+  .field { min-width: 0; }
+  .field.full { grid-column: 1 / -1; }
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #334155;
+    letter-spacing: 0.01em;
+  }
+  .hint { font-weight: 400; color: var(--muted); }
+
+  /* 统一控件：select / input 同一外观 */
+  .control {
+    width: 100%;
+    height: 46px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    font: inherit;
+    font-size: 0.92rem;
+    background: var(--field);
+    color: var(--ink);
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  select.control {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    padding-right: 40px;
+    background-color: var(--field);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+  .control:hover {
+    border-color: var(--line-strong);
+  }
+  .control:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    background-color: #fff;
+  }
+  .control::placeholder { color: #94a3b8; }
+
+  .rules {
+    margin: 20px 0 0;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    background: var(--field-soft);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.55;
+  }
+  .rules code {
+    background: #eef2f7;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.85em;
+    color: #475569;
+  }
+
+  .out {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+  }
+  .out h2 {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    color: var(--accent);
+  }
+
+  /* 统一结果行 + 复制按钮 */
+  .result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 148px 1fr 96px;
+    gap: 12px;
+    align-items: stretch;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--field-soft);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .row:hover {
+    border-color: var(--line-strong);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  }
+  .row.highlight {
+    background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 100%);
+    border-color: #99f6e4;
+  }
+  @media (max-width: 700px) {
+    .row { grid-template-columns: 1fr; }
+  }
+  .key {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #475569;
+    padding: 0 2px;
+  }
+  .key::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+  .row.highlight .key { color: #0f766e; }
+  .row.highlight .key::before { background: var(--ok); }
+
+  .val {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.86rem;
+    line-height: 1.45;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    word-break: break-all;
+    color: var(--ink);
+  }
+  .row.highlight .val {
+    border-color: #99f6e4;
+    color: #115e59;
+  }
+
+  .btn-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 42px;
+    min-width: 96px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 0 12px;
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s, box-shadow .15s, transform .1s;
+  }
+  .btn-copy svg {
+    width: 14px;
+    height: 14px;
+    flex: none;
+  }
+  .btn-copy:hover {
+    background: #163a5c;
+    border-color: #163a5c;
+    box-shadow: 0 4px 12px rgba(30, 77, 123, 0.22);
+  }
+  .btn-copy:active { transform: translateY(1px); }
+  .btn-copy:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .row.highlight .btn-copy {
+    background: var(--ok);
+    border-color: var(--ok);
+  }
+  .row.highlight .btn-copy:hover {
+    background: #0d5c56;
+    border-color: #0d5c56;
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    min-height: 1.4em;
+  }
+  .btn-reset {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: #fff;
+    color: #475569;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .btn-reset:hover {
+    background: var(--field-soft);
+    border-color: #94a3b8;
+    color: var(--ink);
+  }
+  .btn-reset:active { transform: translateY(1px); }
+  .status {
+    font-size: 0.9rem;
+    flex: 1;
+    min-height: 1.4em;
+  }
+  .status.ok { color: var(--ok); }
+  .status.warn { color: var(--warn); }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: #0f172a;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>UTM 自动生成器</h1>
+    <p class="sub">下拉选择站点与渠道，填写系列/素材名后即时生成合规链接。不写进姓名、邮箱等个人信息。</p>
+
+    <div class="card">
+      <div class="grid">
+        <div class="field full">
+          <label for="base">前缀链接</label>
+          <select class="control" id="base"></select>
+        </div>
+
+        <div class="field">
+          <label for="source">utm_source <span class="hint">（平台）</span></label>
+          <select class="control" id="source"></select>
+        </div>
+
+        <div class="field">
+          <label for="medium">utm_medium <span class="hint">（投放方式）</span></label>
+          <select class="control" id="medium"></select>
+        </div>
+
+        <div class="field">
+          <label for="campaign">utm_campaign <span class="hint">（广告系列名）</span></label>
+          <input class="control" id="campaign" type="text" placeholder="例如 midyear-sale_lip-serum" value="" />
+        </div>
+
+        <div class="field">
+          <label for="content">utm_content <span class="hint">（素材名，可选）</span></label>
+          <input class="control" id="content" type="text" placeholder="例如 video-ugc_v1" value="" />
+        </div>
+      </div>
+
+      <div class="rules">
+        规则：小写英文 · 单词用 <code>-</code> · 层级用 <code>_</code> · 不要空格/中文/特殊符号
+      </div>
+
+      <div class="out">
+        <h2>生成结果</h2>
+        <div class="result-list">
+          <div class="row">
+            <div class="key">标准化 campaign</div>
+            <div class="val" id="campOut">-</div>
+            <button class="btn-copy" type="button" data-copy="campOut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
+              复制
+            </button>
+          </div>
+          <div class="row">
+            <div class="key">标准化 content</div>
+            <div class="val" id="contOut">-</div>
+            <button class="btn-copy" type="button" data-copy="contOut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
+              复制
+            </button>
+          </div>
+          <div class="row highlight">
+            <div class="key">完整 UTM 链接</div>
+            <div class="val" id="urlOut">-</div>
+            <button class="btn-copy" type="button" data-copy="urlOut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
+              复制
+            </button>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn-reset" type="button" id="resetBtn">重置</button>
+          <div class="status" id="status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">已复制</div>
+
+  <script>
+    // 以后增删选项只需改这个对象
+    const OPTIONS = {
+      base: [
+        "https://skintific.com/",
+        "https://us.skintific.com/",
+        "https://timephoria.com/",
+        "https://glad2glow.com/",
+      ],
+      source: [
+        "google",
+        "facebook",
+        "instagram",
+        "tiktok",
+        "snapchat",
+        "omnisend",
+        "youtube",
+      ],
+      medium: [
+        "cpc",
+        "display",
+        "paid_social",
+        "email",
+        "organic_social",
+        "affiliate",
+        "sms",
+      ],
+      // source -> 可用的 medium
+      sourceMediumMap: {
+        google: ["cpc", "display", "organic_social", "affiliate", "sms"],
+        facebook: ["paid_social", "organic_social", "affiliate", "sms"],
+        instagram: ["paid_social", "organic_social", "affiliate", "sms"],
+        tiktok: ["paid_social", "organic_social", "affiliate", "sms"],
+        snapchat: ["paid_social", "organic_social", "affiliate", "sms"],
+        omnisend: ["email", "sms"],
+        youtube: ["organic_social", "affiliate", "sms", "paid_social"],
+      },
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function fillSelect(selectEl, list, placeholder) {
+      selectEl.innerHTML = "";
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = placeholder;
+      selectEl.appendChild(empty);
+      list.forEach((item) => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        selectEl.appendChild(opt);
+      });
+      selectEl.value = "";
+    }
+
+    function renderOptions() {
+      fillSelect($("base"), OPTIONS.base, "请选择前缀链接");
+      fillSelect($("source"), OPTIONS.source, "请选择平台");
+      fillSelect($("medium"), OPTIONS.medium, "请选择投放方式");
+    }
+
+    function sanitize(raw) {
+      return String(raw || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s_-]/g, "")
+        .replace(/[\s]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^[-_]+|[-_]+$/g, "");
+    }
+
+    function comboOk(source, medium) {
+      return (OPTIONS.sourceMediumMap[source] || []).includes(medium);
+    }
+
+    function update() {
+      const base = $("base").value;
+      const source = $("source").value;
+      const medium = $("medium").value;
+      const camp = sanitize($("campaign").value);
+      const cont = sanitize($("content").value);
+
+      $("campOut").textContent = camp || "（请填写 campaign）";
+      $("contOut").textContent = cont || "（可选）";
+
+      const status = $("status");
+      const missing = [];
+      if (!base) missing.push("前缀链接");
+      if (!source) missing.push("平台");
+      if (!medium) missing.push("投放方式");
+      if (!camp) missing.push("utm_campaign");
+
+      if (missing.length) {
+        $("urlOut").textContent = "请先完成必填项";
+        status.className = "status warn";
+        status.textContent = "缺少：" + missing.join("、");
+        return;
+      }
+
+      if (!comboOk(source, medium)) {
+        status.className = "status warn";
+        status.textContent = "⚠ 请检查 source / medium 搭配（例如 facebook 搭配 paid_social，google 搜索用 cpc）";
+      } else {
+        status.className = "status ok";
+        status.textContent = "✓ 搭配正常";
+      }
+
+      let url = `${base}?utm_source=${encodeURIComponent(source)}&utm_medium=${encodeURIComponent(medium)}&utm_campaign=${encodeURIComponent(camp)}`;
+      if (cont) url += `&utm_content=${encodeURIComponent(cont)}`;
+      $("urlOut").textContent = url;
+    }
+
+    function resetForm() {
+      $("base").value = "";
+      $("source").value = "";
+      $("medium").value = "";
+      $("campaign").value = "";
+      $("content").value = "";
+      update();
+    }
+
+    renderOptions();
+
+    ["base", "source", "medium", "campaign", "content"].forEach((id) => {
+      $(id).addEventListener("input", update);
+      $(id).addEventListener("change", update);
+    });
+
+    $("resetBtn").addEventListener("click", resetForm);
+
+    document.querySelectorAll("[data-copy]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const text = $(btn.dataset.copy).textContent;
+        if (!text || text.startsWith("（") || text.startsWith("请先")) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          const toast = $("toast");
+          toast.classList.add("show");
+          setTimeout(() => toast.classList.remove("show"), 1200);
+        } catch (e) {
+          prompt("复制失败，请手动复制：", text);
+        }
+      });
+    });
+
+    update();
+  </script>
+</body>
+</html>
