@@ -108,6 +108,21 @@
     background-color: #fff;
   }
   .control::placeholder { color: #94a3b8; }
+  .control.invalid {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
+  }
+  .control.invalid:focus {
+    border-color: var(--warn);
+    box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.18);
+  }
+  .field-error {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: var(--warn);
+    min-height: 1.2em;
+  }
+  .field-error:empty { display: none; }
 
   .rules {
     margin: 20px 0 0;
@@ -311,13 +326,14 @@
 <body>
   <div class="wrap">
     <h1>UTM 自动生成器</h1>
-    <p class="sub">下拉选择站点与渠道，填写系列/素材名后即时生成合规链接。不写进姓名、邮箱等个人信息。</p>
+    <p class="sub">输入落地页链接，选择渠道后填写系列/素材名，即时生成合规 UTM 链接。不写进姓名、邮箱等个人信息。</p>
 
     <div class="card">
       <div class="grid">
         <div class="field full">
-          <label for="base">前缀链接</label>
-          <select class="control" id="base"></select>
+          <label for="base">前缀链接 <span class="hint">（落地页 URL）</span></label>
+          <input class="control" id="base" type="text" inputmode="url" placeholder="例如 https://example.com/product 或已带参数的链接" value="" autocomplete="url" spellcheck="false" />
+          <div class="field-error" id="baseError"></div>
         </div>
 
         <div class="field">
@@ -386,12 +402,6 @@
   <script>
     // 以后增删选项只需改这个对象
     const OPTIONS = {
-      base: [
-        "https://skintific.com/",
-        "https://us.skintific.com/",
-        "https://timephoria.com/",
-        "https://glad2glow.com/",
-      ],
       source: [
         "google",
         "facebook",
@@ -440,7 +450,6 @@
     }
 
     function renderOptions() {
-      fillSelect($("base"), OPTIONS.base, "请选择前缀链接");
       fillSelect($("source"), OPTIONS.source, "请选择平台");
       fillSelect($("medium"), OPTIONS.medium, "请选择投放方式");
     }
@@ -459,22 +468,76 @@
       return (OPTIONS.sourceMediumMap[source] || []).includes(medium);
     }
 
+    /** 校验并规范化前缀链接；成功返回规范化 URL，失败返回 null */
+    function parseBaseUrl(raw) {
+      const trimmed = String(raw || "").trim();
+      if (!trimmed) return { ok: false, reason: "empty" };
+
+      let candidate = trimmed;
+      if (!/^https?:\/\//i.test(candidate)) {
+        candidate = "https://" + candidate;
+      }
+
+      let parsed;
+      try {
+        parsed = new URL(candidate);
+      } catch (e) {
+        return { ok: false, reason: "invalid" };
+      }
+
+      if (!/^https?:$/i.test(parsed.protocol)) {
+        return { ok: false, reason: "invalid" };
+      }
+      if (!parsed.hostname || !parsed.hostname.includes(".")) {
+        return { ok: false, reason: "invalid" };
+      }
+
+      return { ok: true, href: parsed.href };
+    }
+
+    function joinUtm(baseHref, query) {
+      const clean = baseHref.replace(/[?&]+$/, "");
+      const sep = clean.includes("?") ? "&" : "?";
+      return clean + sep + query;
+    }
+
     function update() {
-      const base = $("base").value;
+      const baseRaw = $("base").value;
+      const baseResult = parseBaseUrl(baseRaw);
       const source = $("source").value;
       const medium = $("medium").value;
       const camp = sanitize($("campaign").value);
       const cont = sanitize($("content").value);
+
+      const baseEl = $("base");
+      const baseError = $("baseError");
+      if (!baseRaw.trim()) {
+        baseEl.classList.remove("invalid");
+        baseError.textContent = "";
+      } else if (!baseResult.ok) {
+        baseEl.classList.add("invalid");
+        baseError.textContent = "请输入有效的链接（需含域名，如 https://example.com/path）";
+      } else {
+        baseEl.classList.remove("invalid");
+        baseError.textContent = "";
+      }
 
       $("campOut").textContent = camp || "（请填写 campaign）";
       $("contOut").textContent = cont || "（可选）";
 
       const status = $("status");
       const missing = [];
-      if (!base) missing.push("前缀链接");
+      if (!baseRaw.trim()) missing.push("前缀链接");
       if (!source) missing.push("平台");
       if (!medium) missing.push("投放方式");
       if (!camp) missing.push("utm_campaign");
+
+      if (baseRaw.trim() && !baseResult.ok) {
+        $("urlOut").textContent = "前缀链接格式不正确";
+        status.className = "status warn";
+        status.textContent = "请修正前缀链接后再生成";
+        return;
+      }
 
       if (missing.length) {
         $("urlOut").textContent = "请先完成必填项";
@@ -491,9 +554,13 @@
         status.textContent = "✓ 搭配正常";
       }
 
-      let url = `${base}?utm_source=${encodeURIComponent(source)}&utm_medium=${encodeURIComponent(medium)}&utm_campaign=${encodeURIComponent(camp)}`;
-      if (cont) url += `&utm_content=${encodeURIComponent(cont)}`;
-      $("urlOut").textContent = url;
+      const utmQuery =
+        `utm_source=${encodeURIComponent(source)}` +
+        `&utm_medium=${encodeURIComponent(medium)}` +
+        `&utm_campaign=${encodeURIComponent(camp)}` +
+        (cont ? `&utm_content=${encodeURIComponent(cont)}` : "");
+
+      $("urlOut").textContent = joinUtm(baseResult.href, utmQuery);
     }
 
     function resetForm() {
@@ -517,7 +584,7 @@
     document.querySelectorAll("[data-copy]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const text = $(btn.dataset.copy).textContent;
-        if (!text || text.startsWith("（") || text.startsWith("请先")) return;
+        if (!text || text.startsWith("（") || text.startsWith("请先") || text.startsWith("前缀")) return;
         try {
           await navigator.clipboard.writeText(text);
           const toast = $("toast");
