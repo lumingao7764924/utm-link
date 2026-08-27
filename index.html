@@ -1,9 +1,27 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>UTM 自动生成器</title>
+<title>UTM Link Builder</title>
+<script>
+  (function () {
+    var MANUAL_KEY = "utm-link-lang-manual";
+    var saved = localStorage.getItem(MANUAL_KEY);
+    var lang;
+    if (saved === "zh" || saved === "en") {
+      lang = saved;
+    } else {
+      var list = navigator.languages && navigator.languages.length
+        ? navigator.languages
+        : [navigator.language || "en"];
+      var primary = String(list[0] || "en").toLowerCase();
+      lang = primary.indexOf("zh") === 0 ? "zh" : "en";
+    }
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.documentElement.dataset.lang = lang;
+  })();
+</script>
 <style>
   :root {
     --bg: #eef2f6;
@@ -321,85 +339,262 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+
+  .topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 4px;
+  }
+  .topbar > div { min-width: 0; }
+  .lang-switch {
+    display: inline-flex;
+    flex: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .lang-switch button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .lang-switch button:hover { color: var(--ink); }
+  .lang-switch button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  @media (max-width: 700px) {
+    .topbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .lang-switch { align-self: flex-end; }
+  }
 </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>UTM 自动生成器</h1>
-    <p class="sub">输入落地页链接，选择渠道后填写系列/素材名，即时生成合规 UTM 链接。不写进姓名、邮箱等个人信息。</p>
+    <div class="topbar">
+      <div>
+        <h1 data-i18n="title">UTM 自动生成器</h1>
+        <p class="sub" data-i18n="subtitle">输入落地页链接，选择渠道后填写系列/素材名，即时生成合规 UTM 链接。不写进姓名、邮箱等个人信息。</p>
+      </div>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" id="langZh" data-lang="zh">中文</button>
+        <button type="button" id="langEn" data-lang="en">EN</button>
+      </div>
+    </div>
 
     <div class="card">
       <div class="grid">
         <div class="field full">
-          <label for="base">前缀链接 <span class="hint">（落地页 URL）</span></label>
-          <input class="control" id="base" type="text" inputmode="url" placeholder="例如 https://example.com/product 或已带参数的链接" value="" autocomplete="url" spellcheck="false" />
+          <label for="base"><span data-i18n="labelBase">前缀链接</span> <span class="hint" data-i18n="hintBase">（落地页 URL）</span></label>
+          <input class="control" id="base" type="text" inputmode="url" data-i18n-placeholder="placeholderBase" placeholder="例如 https://example.com/product 或已带参数的链接" value="" autocomplete="url" spellcheck="false" />
           <div class="field-error" id="baseError"></div>
         </div>
 
         <div class="field">
-          <label for="source">utm_source <span class="hint">（平台）</span></label>
+          <label for="source">utm_source <span class="hint" data-i18n="hintSource">（平台）</span></label>
           <select class="control" id="source"></select>
         </div>
 
         <div class="field">
-          <label for="medium">utm_medium <span class="hint">（投放方式）</span></label>
+          <label for="medium">utm_medium <span class="hint" data-i18n="hintMedium">（投放方式）</span></label>
           <select class="control" id="medium"></select>
         </div>
 
         <div class="field">
-          <label for="campaign">utm_campaign <span class="hint">（广告系列名）</span></label>
-          <input class="control" id="campaign" type="text" placeholder="例如 midyear-sale_lip-serum" value="" />
+          <label for="campaign">utm_campaign <span class="hint" data-i18n="hintCampaign">（广告系列名）</span></label>
+          <input class="control" id="campaign" type="text" data-i18n-placeholder="placeholderCampaign" placeholder="例如 midyear-sale_lip-serum" value="" />
         </div>
 
         <div class="field">
-          <label for="content">utm_content <span class="hint">（素材名，可选）</span></label>
-          <input class="control" id="content" type="text" placeholder="例如 video-ugc_v1" value="" />
+          <label for="content">utm_content <span class="hint" data-i18n="hintContent">（素材名，可选）</span></label>
+          <input class="control" id="content" type="text" data-i18n-placeholder="placeholderContent" placeholder="例如 video-ugc_v1" value="" />
         </div>
       </div>
 
-      <div class="rules">
+      <div class="rules" data-i18n-html="rules">
         规则：小写英文 · 单词用 <code>-</code> · 层级用 <code>_</code> · 不要空格/中文/特殊符号
       </div>
 
       <div class="out">
-        <h2>生成结果</h2>
+        <h2 data-i18n="resultTitle">生成结果</h2>
         <div class="result-list">
           <div class="row">
-            <div class="key">标准化 campaign</div>
+            <div class="key" data-i18n="keyCampaign">标准化 campaign</div>
             <div class="val" id="campOut">-</div>
             <button class="btn-copy" type="button" data-copy="campOut">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
-              复制
+              <span data-i18n="copy">复制</span>
             </button>
           </div>
           <div class="row">
-            <div class="key">标准化 content</div>
+            <div class="key" data-i18n="keyContent">标准化 content</div>
             <div class="val" id="contOut">-</div>
             <button class="btn-copy" type="button" data-copy="contOut">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
-              复制
+              <span data-i18n="copy">复制</span>
             </button>
           </div>
           <div class="row highlight">
-            <div class="key">完整 UTM 链接</div>
+            <div class="key" data-i18n="keyUrl">完整 UTM 链接</div>
             <div class="val" id="urlOut">-</div>
             <button class="btn-copy" type="button" data-copy="urlOut">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
-              复制
+              <span data-i18n="copy">复制</span>
             </button>
           </div>
         </div>
         <div class="actions">
-          <button class="btn-reset" type="button" id="resetBtn">重置</button>
+          <button class="btn-reset" type="button" id="resetBtn" data-i18n="reset">重置</button>
           <div class="status" id="status"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="toast" id="toast">已复制</div>
+  <div class="toast" id="toast" data-i18n="copied">已复制</div>
 
   <script>
+    const LANG_KEY = "utm-link-lang-manual";
+
+    const I18N = {
+      zh: {
+        pageTitle: "UTM 自动生成器",
+        title: "UTM 自动生成器",
+        subtitle: "输入落地页链接，选择渠道后填写系列/素材名，即时生成合规 UTM 链接。不写进姓名、邮箱等个人信息。",
+        labelBase: "前缀链接",
+        hintBase: "（落地页 URL）",
+        placeholderBase: "例如 https://example.com/product 或已带参数的链接",
+        hintSource: "（平台）",
+        hintMedium: "（投放方式）",
+        hintCampaign: "（广告系列名）",
+        hintContent: "（素材名，可选）",
+        placeholderCampaign: "例如 midyear-sale_lip-serum",
+        placeholderContent: "例如 video-ugc_v1",
+        selectSource: "请选择平台",
+        selectMedium: "请选择投放方式",
+        rules: "规则：小写英文 · 单词用 <code>-</code> · 层级用 <code>_</code> · 不要空格/中文/特殊符号",
+        resultTitle: "生成结果",
+        keyCampaign: "标准化 campaign",
+        keyContent: "标准化 content",
+        keyUrl: "完整 UTM 链接",
+        copy: "复制",
+        reset: "重置",
+        copied: "已复制",
+        copyFailed: "复制失败，请手动复制：",
+        campEmpty: "（请填写 campaign）",
+        contEmpty: "（可选）",
+        baseInvalid: "请输入有效的链接（需含域名，如 https://example.com/path）",
+        urlInvalid: "前缀链接格式不正确",
+        fixBase: "请修正前缀链接后再生成",
+        fillRequired: "请先完成必填项",
+        missingPrefix: "缺少：",
+        comboWarn: "⚠ 请检查 source / medium 搭配（例如 facebook 搭配 paid_social，google 搜索用 cpc）",
+        comboOk: "✓ 搭配正常",
+        fieldBase: "前缀链接",
+        fieldSource: "平台",
+        fieldMedium: "投放方式",
+        fieldCampaign: "utm_campaign",
+      },
+      en: {
+        pageTitle: "UTM Link Builder",
+        title: "UTM Link Builder",
+        subtitle: "Enter a landing page URL, pick a channel, and name your campaign/creative to generate compliant UTM links. No personal info (name, email, etc.).",
+        labelBase: "Base URL",
+        hintBase: "(landing page)",
+        placeholderBase: "e.g. https://example.com/product or a URL with existing params",
+        hintSource: "(platform)",
+        hintMedium: "(placement type)",
+        hintCampaign: "(campaign name)",
+        hintContent: "(creative name, optional)",
+        placeholderCampaign: "e.g. midyear-sale_lip-serum",
+        placeholderContent: "e.g. video-ugc_v1",
+        selectSource: "Select platform",
+        selectMedium: "Select placement",
+        rules: "Rules: lowercase · words joined with <code>-</code> · levels with <code>_</code> · no spaces/CJK/special chars",
+        resultTitle: "Generated output",
+        keyCampaign: "Normalized campaign",
+        keyContent: "Normalized content",
+        keyUrl: "Full UTM link",
+        copy: "Copy",
+        reset: "Reset",
+        copied: "Copied",
+        copyFailed: "Copy failed — copy manually:",
+        campEmpty: "(enter campaign)",
+        contEmpty: "(optional)",
+        baseInvalid: "Enter a valid URL with a domain (e.g. https://example.com/path)",
+        urlInvalid: "Invalid base URL",
+        fixBase: "Fix the base URL to generate",
+        fillRequired: "Complete required fields first",
+        missingPrefix: "Missing: ",
+        comboWarn: "⚠ Check source / medium pairing (e.g. facebook + paid_social, google search + cpc)",
+        comboOk: "✓ Pairing looks good",
+        fieldBase: "base URL",
+        fieldSource: "platform",
+        fieldMedium: "placement",
+        fieldCampaign: "utm_campaign",
+      },
+    };
+
+    let currentLang = document.documentElement.dataset.lang || "en";
+
+    function detectBrowserLang() {
+      const list = navigator.languages && navigator.languages.length
+        ? navigator.languages
+        : [navigator.language || "en"];
+      const primary = String(list[0] || "en").toLowerCase();
+      return primary.startsWith("zh") ? "zh" : "en";
+    }
+
+    function getInitialLang() {
+      const saved = localStorage.getItem(LANG_KEY);
+      if (saved === "zh" || saved === "en") return saved;
+      return detectBrowserLang();
+    }
+
+    function t(key) {
+      return I18N[currentLang][key] ?? I18N.en[key] ?? key;
+    }
+
+    function applyLang(lang, { persist = false } = {}) {
+      currentLang = lang;
+      if (persist) {
+        localStorage.setItem(LANG_KEY, lang);
+      }
+      document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+      document.documentElement.dataset.lang = lang;
+      document.title = t("pageTitle");
+
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+      });
+      document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+        el.innerHTML = t(el.dataset.i18nHtml);
+      });
+      document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        el.placeholder = t(el.dataset.i18nPlaceholder);
+      });
+
+      document.getElementById("langZh").classList.toggle("active", lang === "zh");
+      document.getElementById("langEn").classList.toggle("active", lang === "en");
+
+      renderOptions();
+      update();
+    }
+
     // 以后增删选项只需改这个对象
     const OPTIONS = {
       source: [
@@ -451,8 +646,12 @@
     }
 
     function renderOptions() {
-      fillSelect($("source"), OPTIONS.source, "请选择平台");
-      fillSelect($("medium"), OPTIONS.medium, "请选择投放方式");
+      const sourceVal = $("source").value;
+      const mediumVal = $("medium").value;
+      fillSelect($("source"), OPTIONS.source, t("selectSource"));
+      fillSelect($("medium"), OPTIONS.medium, t("selectMedium"));
+      if (OPTIONS.source.includes(sourceVal)) $("source").value = sourceVal;
+      if (OPTIONS.medium.includes(mediumVal)) $("medium").value = mediumVal;
     }
 
     function sanitize(raw) {
@@ -517,42 +716,42 @@
         baseError.textContent = "";
       } else if (!baseResult.ok) {
         baseEl.classList.add("invalid");
-        baseError.textContent = "请输入有效的链接（需含域名，如 https://example.com/path）";
+        baseError.textContent = t("baseInvalid");
       } else {
         baseEl.classList.remove("invalid");
         baseError.textContent = "";
       }
 
-      $("campOut").textContent = camp || "（请填写 campaign）";
-      $("contOut").textContent = cont || "（可选）";
+      $("campOut").textContent = camp || t("campEmpty");
+      $("contOut").textContent = cont || t("contEmpty");
 
       const status = $("status");
       const missing = [];
-      if (!baseRaw.trim()) missing.push("前缀链接");
-      if (!source) missing.push("平台");
-      if (!medium) missing.push("投放方式");
-      if (!camp) missing.push("utm_campaign");
+      if (!baseRaw.trim()) missing.push(t("fieldBase"));
+      if (!source) missing.push(t("fieldSource"));
+      if (!medium) missing.push(t("fieldMedium"));
+      if (!camp) missing.push(t("fieldCampaign"));
 
       if (baseRaw.trim() && !baseResult.ok) {
-        $("urlOut").textContent = "前缀链接格式不正确";
+        $("urlOut").textContent = t("urlInvalid");
         status.className = "status warn";
-        status.textContent = "请修正前缀链接后再生成";
+        status.textContent = t("fixBase");
         return;
       }
 
       if (missing.length) {
-        $("urlOut").textContent = "请先完成必填项";
+        $("urlOut").textContent = t("fillRequired");
         status.className = "status warn";
-        status.textContent = "缺少：" + missing.join("、");
+        status.textContent = t("missingPrefix") + missing.join(currentLang === "zh" ? "、" : ", ");
         return;
       }
 
       if (!comboOk(source, medium)) {
         status.className = "status warn";
-        status.textContent = "⚠ 请检查 source / medium 搭配（例如 facebook 搭配 paid_social，google 搜索用 cpc）";
+        status.textContent = t("comboWarn");
       } else {
         status.className = "status ok";
-        status.textContent = "✓ 搭配正常";
+        status.textContent = t("comboOk");
       }
 
       const utmQuery =
@@ -573,7 +772,9 @@
       update();
     }
 
-    renderOptions();
+    document.querySelectorAll(".lang-switch [data-lang]").forEach((btn) => {
+      btn.addEventListener("click", () => applyLang(btn.dataset.lang, { persist: true }));
+    });
 
     ["base", "source", "medium", "campaign", "content"].forEach((id) => {
       $(id).addEventListener("input", update);
@@ -585,19 +786,27 @@
     document.querySelectorAll("[data-copy]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const text = $(btn.dataset.copy).textContent;
-        if (!text || text.startsWith("（") || text.startsWith("请先") || text.startsWith("前缀")) return;
+        const nonCopyable = new Set([
+          t("campEmpty"), t("contEmpty"), t("fillRequired"), t("urlInvalid"), "-",
+          I18N.zh.campEmpty, I18N.en.campEmpty,
+          I18N.zh.contEmpty, I18N.en.contEmpty,
+          I18N.zh.fillRequired, I18N.en.fillRequired,
+          I18N.zh.urlInvalid, I18N.en.urlInvalid,
+        ]);
+        if (!text || nonCopyable.has(text)) return;
         try {
           await navigator.clipboard.writeText(text);
           const toast = $("toast");
+          toast.textContent = t("copied");
           toast.classList.add("show");
           setTimeout(() => toast.classList.remove("show"), 1200);
         } catch (e) {
-          prompt("复制失败，请手动复制：", text);
+          prompt(t("copyFailed"), text);
         }
       });
     });
 
-    update();
+    applyLang(getInitialLang());
   </script>
 </body>
 </html>
